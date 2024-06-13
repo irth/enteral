@@ -15,6 +15,16 @@ type Cache interface {
 	Set(ctx context.Context, key string, id string, expiry time.Duration, v string) error
 }
 
+type DummyCache struct{}
+
+func (d DummyCache) Get(ctx context.Context, key string, id string) (string, error) {
+	return "", KeyNotFound
+}
+
+func (d DummyCache) Set(ctx context.Context, key string, id string, expiry time.Duration, feed string) error {
+	return nil
+}
+
 type ValkeyCache struct {
 	client valkey.Client
 }

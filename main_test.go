@@ -9,16 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type DummyCache struct{}
-
-func (d DummyCache) Get(ctx context.Context, key string, id string) (string, error) {
-	return "", KeyNotFound
-}
-
-func (d DummyCache) Set(ctx context.Context, key string, id string, expiry time.Duration, feed string) error {
-	return nil
-}
-
 func TestIsShort(t *testing.T) {
 	app := App{cache: DummyCache{}}
 

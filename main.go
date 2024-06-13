@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"log"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/gorilla/feeds"
 	"github.com/mmcdole/gofeed"
 	"golang.org/x/net/context"
 )
@@ -77,7 +77,7 @@ func GetId(videoUrl string) (string, error) {
 
 var ErrNotFound = errors.New("not found")
 
-func (a App) FilterFeed(ctx context.Context, url string) (*feeds.Feed, error) {
+func (a App) FilterFeed(ctx context.Context, id string, url string) (*Feed, error) {
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURLWithContext(url, ctx)
 	if err != nil {
@@ -87,17 +87,24 @@ func (a App) FilterFeed(ctx context.Context, url string) (*feeds.Feed, error) {
 		return nil, err
 	}
 
-	newFeed := &feeds.Feed{
-		Title: feed.Title,
-		Link:  &feeds.Link{Href: feed.Link},
+	newFeed := Feed{
+		Xmlns:      "http://www.w3.org/2005/Atom",
+		XmlnsMedia: "http://search.yahoo.com/mrss/",
+		XmlnsYt:    "http://www.youtube.com/xml/schemas/2015",
+		Id:         fmt.Sprintf("enteral:channel:%s", id),
+		Title:      feed.Title,
+		Links:      []Link{{Rel: "alternate", Href: feed.Link}},
+		Published:  feed.Published,
 	}
 
-	if feed.Image != nil {
-		newFeed.Image = &feeds.Image{Title: feed.Image.Title, Url: feed.Image.URL}
-	}
+	var author *Author = nil
 
 	if len(feed.Authors) > 0 {
-		newFeed.Author = &feeds.Author{Name: feed.Authors[0].Name}
+		author = &Author{
+			Name: feed.Authors[0].Name,
+			Uri:  feed.Link,
+		}
+		newFeed.Author = author
 	}
 
 	for _, item := range feed.Items {
@@ -116,25 +123,18 @@ func (a App) FilterFeed(ctx context.Context, url string) (*feeds.Feed, error) {
 			continue
 		}
 
-		newItem := &feeds.Item{
-			Id:          item.GUID,
-			Title:       item.Title,
-			Link:        &feeds.Link{Href: item.Link},
-			Description: item.Description,
+		newItem := Entry{
+			Title:     item.Title,
+			ID:        item.GUID,
+			Author:    author,
+			Published: item.Published,
+			Updated:   item.Updated,
 		}
 
-		if item.PublishedParsed != nil {
-			newItem.Created = *item.PublishedParsed
-		}
-
-		if item.UpdatedParsed != nil {
-			newItem.Updated = *item.UpdatedParsed
-		}
-
-		newFeed.Items = append(newFeed.Items, newItem)
+		newFeed.Entries = append(newFeed.Entries, newItem)
 	}
 
-	return newFeed, nil
+	return &newFeed, nil
 }
 
 //go:embed index.html
@@ -177,7 +177,7 @@ func (a App) Feed(w http.ResponseWriter, r *http.Request) {
 	qs.Set("channel_id", chId)
 
 	feedUrl := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?%s", qs.Encode())
-	newFeed, err := a.FilterFeed(r.Context(), feedUrl)
+	newFeed, err := a.FilterFeed(r.Context(), chId, feedUrl)
 	if err != nil {
 		if err == ErrNotFound {
 			w.WriteHeader(http.StatusNotFound)
@@ -194,13 +194,14 @@ func (a App) Feed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filteredFeed, err := newFeed.ToAtom()
+	filteredFeedB, err := xml.MarshalIndent(newFeed, "", "    ")
 	if err != nil {
 		log.Printf("while generating atom for %s: %s", feedUrl, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "internal server error")
 		return
 	}
+	filteredFeed := xml.Header + string(filteredFeedB)
 
 	w.Header().Set("Content-Type", "text/xml; charset=UTF-8")
 	fmt.Fprint(w, filteredFeed)
@@ -222,6 +223,8 @@ func (a App) Router() http.Handler {
 }
 
 func main() {
+	noCache := os.Getenv("NO_CACHE") == "1"
+
 	redisUrl := "redis://127.0.0.1:6379"
 	if redisEnv := os.Getenv("REDIS_URL"); redisEnv != "" {
 		redisUrl = redisEnv
@@ -232,14 +235,19 @@ func main() {
 		listenAddr = listenEnv
 	}
 
-	vc, err := NewValkeyIsShortCache(redisUrl)
-	if err != nil {
-		log.Fatal(err)
+	var cache Cache = DummyCache{}
+
+	if !noCache {
+		vc, err := NewValkeyIsShortCache(redisUrl)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cache = vc
 	}
-	app := App{cache: vc}
+	app := App{cache: cache}
 
 	log.Printf("listening on %s", listenAddr)
-	err = http.ListenAndServe(listenAddr, app.Router())
+	err := http.ListenAndServe(listenAddr, app.Router())
 	if err != nil {
 		log.Fatal(err)
 	}
