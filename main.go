@@ -129,6 +129,10 @@ func (a App) FilterFeed(ctx context.Context, id string, url string) (*Feed, erro
 			Author:    author,
 			Published: item.Published,
 			Updated:   item.Updated,
+			Link: Link{
+				Rel:  "alternate",
+				Href: item.Link,
+			},
 		}
 
 		newFeed.Entries = append(newFeed.Entries, newItem)

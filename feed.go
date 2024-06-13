@@ -33,4 +33,5 @@ type Entry struct {
 	Author    *Author `xml:"author,omitempty"`
 	Published string  `xml:"published,omitempty"`
 	Updated   string  `xml:"updated,omitempty"`
+	Link      Link
 }
