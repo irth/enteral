@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -218,15 +219,25 @@ func (a App) Router() http.Handler {
 }
 
 func main() {
-	vc, err := NewValkeyIsShortCache("redis://127.0.0.1:6379")
+	redisUrl := "redis://127.0.0.1:6379"
+	if redisEnv := os.Getenv("REDIS_URL"); redisEnv != "" {
+		redisUrl = redisEnv
+	}
+
+	listenAddr := ":6323"
+	if listenEnv := os.Getenv("LISTEN_ADDR"); listenEnv != "" {
+		listenAddr = listenEnv
+	}
+
+	vc, err := NewValkeyIsShortCache(redisUrl)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	app := App{cache: vc}
-	// a, err := app.FilterFeed(context.Background(), "https://www.youtube.com/feeds/videos.xml?channel_id=UC1Zfv1Zrp1q5lKgBomzOyCA")
 
+	log.Printf("listening on %s", listenAddr)
 	err = http.ListenAndServe(":6323", app.Router())
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
