@@ -224,7 +224,7 @@ func main() {
 		redisUrl = redisEnv
 	}
 
-	listenAddr := ":6323"
+	listenAddr := ":5000"
 	if listenEnv := os.Getenv("LISTEN_ADDR"); listenEnv != "" {
 		listenAddr = listenEnv
 	}
@@ -236,7 +236,7 @@ func main() {
 	app := App{cache: vc}
 
 	log.Printf("listening on %s", listenAddr)
-	err = http.ListenAndServe(":6323", app.Router())
+	err = http.ListenAndServe(listenAddr, app.Router())
 	if err != nil {
 		log.Fatal(err)
 	}
