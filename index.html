@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<title>Enteral - filter out shorts from youtube feeds</title>
+<meta charset="utf-8">
+<style>
+  body {
+    font-family: monospace;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1em;
+    padding-top: 4em;
+    line-height: 1.5;
+  }
+
+  code {
+    border: solid 1px #888;
+    background: #eee;
+    padding: .1em .4em;
+    border-radius: 5px;
+    line-height: 2;
+  }
+
+  h2 {
+    margin-top: 2em;
+  }
+</style>
+
+<body>
+  <h1>enteral</h1>
+
+  <p>filters out youtube shorts from youtube rss feeds</p>
+
+  <p>might not work, or might hit some youtube bot detection or something</p>
+
+  <p>once it starts breaking i'll look into getting proxies, rate limiting etc</p>
+
+  <p>also preferably only use it for feeds of people who do post shorts to limit usage</p>
+
+  <h2>usage</h2>
+
+  <p>replace <code>www.youtube.com</code> in the feed url with <code>enteral.pi-wo.pl</code></p>
+  <p>e.g.<br><code>https://www.youtube.com/feeds/videos.xml?channel_id=UC1Zfv1Zrp1q5lKgBomzOyCA</code>
+    <br> becomes <br><code>https://enteral.pi-wo.pl/feeds/videos.xml?channel_id=UC1Zfv1Zrp1q5lKgBomzOyCA</code>
+
+  <h2>how</h2>
+  <p>if you request <code>https://www.youtube.com/shorts/&lt;video_id&gt;</code> with the ID of a video which is not a
+    short, YouTube will redirect to <code>/watch?v=...</code>. If it is a short, it doesn't.
+
+  <h2>who</h2>
+  <p>
+    me (<a href="https://irth.pl">Wojciech ~irth Kwolek</a>)
+  </p>
+  <p>
+    you can buy me a beer at <a href="https://pi-wo.pl">pi-wo.pl</a>
+  </p>
+
+  <h2>code</h2>
+  <p>
+    <a href="https://github.com/irth/enteral">very low quality</a>
+</body>

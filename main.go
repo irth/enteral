@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"log"
@@ -77,7 +78,6 @@ func GetId(videoUrl string) (string, error) {
 var ErrNotFound = errors.New("not found")
 
 func (a App) FilterFeed(ctx context.Context, url string) (*feeds.Feed, error) {
-	fmt.Println("yt request")
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURLWithContext(url, ctx)
 	if err != nil {
@@ -137,8 +137,11 @@ func (a App) FilterFeed(ctx context.Context, url string) (*feeds.Feed, error) {
 	return newFeed, nil
 }
 
+//go:embed index.html
+var index []byte
+
 func (a App) Root(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("hi"))
+	w.Write(index)
 }
 
 func (a App) Feed(w http.ResponseWriter, r *http.Request) {
